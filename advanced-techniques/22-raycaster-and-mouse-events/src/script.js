@@ -37,6 +37,25 @@ object3.position.x = 2
 scene.add(object1, object2, object3)
 
 /**
+ * Raycaster
+ */
+const raycaster = new THREE.Raycaster()
+const rayOrigin = new THREE.Vector3(-3, 0, 0)
+const rayDirection = new THREE.Vector3(10, 0, 0)
+rayDirection.normalize()
+object1.updateMatrixWorld()
+object2.updateMatrixWorld()
+object3.updateMatrixWorld()
+raycaster.set(rayOrigin, rayDirection)
+
+const intersect = raycaster.intersectObject(object2)
+console.log(intersect)
+
+
+const intersects = raycaster.intersectObjects([object1, object2, object3])
+console.log(intersects)
+
+/**
  * Sizes
  */
 const sizes = {
@@ -44,8 +63,7 @@ const sizes = {
     height: window.innerHeight
 }
 
-window.addEventListener('resize', () =>
-{
+window.addEventListener('resize', () => {
     // Update sizes
     sizes.width = window.innerWidth
     sizes.height = window.innerHeight
@@ -64,7 +82,8 @@ window.addEventListener('resize', () =>
  */
 // Base camera
 const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100)
-camera.position.z = 3
+camera.position.z = 5
+camera.position.y = 2
 scene.add(camera)
 
 // Controls
@@ -85,9 +104,28 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
  */
 const clock = new THREE.Clock()
 
-const tick = () =>
-{
+const tick = () => {
     const elapsedTime = clock.getElapsedTime()
+
+    // Animate objects
+    object1.position.y = Math.sin(elapsedTime * 0.3) * 3.5
+    object2.position.y = Math.sin(elapsedTime * 0.8) * 3.5
+    object3.position.y = Math.sin(elapsedTime * 1.4) * 3.5
+
+    const rayOrigin = new THREE.Vector3(-3, 0, 0)
+    const rayDirection = new THREE.Vector3(1, 0, 0)
+    rayDirection.normalize()
+    raycaster.set(rayOrigin, rayDirection)
+    const objectsToTest = [object1, object2, object3]
+    const intersects = raycaster.intersectObjects(objectsToTest)
+
+    for (const object of objectsToTest) {
+        object.material.color.set('red')
+    }
+
+    for (const intersect of intersects) {
+        intersect.object.material.color.set('blue')
+    }
 
     // Update controls
     controls.update()
