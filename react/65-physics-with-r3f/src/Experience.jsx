@@ -1,12 +1,15 @@
-import { useRef, useState } from 'react'
-import { OrbitControls } from '@react-three/drei'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { OrbitControls, useGLTF } from '@react-three/drei'
 import { Perf } from 'r3f-perf'
-import { BallCollider, Physics, RigidBody, CuboidCollider } from '@react-three/rapier'
+import { BallCollider, Physics, RigidBody, CuboidCollider, CylinderCollider, InstancedRigidBodies } from '@react-three/rapier'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
+const cubesCount = 100;
+
 export default function Experience() {
     const [hitSound] = useState(() => new Audio('./hit.mp3'))
+    const hamburger = useGLTF('./hamburger.glb')
 
     const cube = useRef(null)
     const twister = useRef(null)
@@ -39,6 +42,39 @@ export default function Experience() {
         // hitSound.play()
     }
 
+    const cubes = useRef()
+
+    // Settings for instancdMesh
+    // useEffect(() => {
+    //     for (let i = 0; i < cubesCount; i++) {
+    //         const matrix = new THREE.Matrix4();
+    //         matrix.compose(
+    //             new THREE.Vector3(i * 2, 0, 0),
+    //             new THREE.Quaternion(),
+    //             new THREE.Vector3(1, 1, 1)
+    //         )
+    //         cubes.current.setMatrixAt(i, matrix);
+    //     }
+    // }, []);
+
+    const instances = useMemo(() => {
+        const instances = []
+
+        for (let i = 0; i < cubesCount; i++) {
+            instances.push({
+                key: 'instance_' + i,
+                position: [
+                    (Math.random() - 0.5) * 8,
+                    6 + i * 0.2,
+                    (Math.random() - 0.5) * 8,
+                ],
+                rotation: [Math.random(), Math.random(), Math.random()]
+            })
+        }
+
+        return instances;
+    }, [])
+
     return <>
         <Perf position="top-left" />
 
@@ -47,7 +83,7 @@ export default function Experience() {
         <directionalLight castShadow position={[1, 2, 3]} intensity={4.5} />
         <ambientLight intensity={1.5} />
 
-        <Physics debug gravity={[0, -9.08, 0]}>
+        <Physics debug={false} gravity={[0, -9.08, 0]}>
             <RigidBody colliders='ball'>
                 <mesh castShadow position={[-1.5, 2, 0]}>
                     <sphereGeometry />
@@ -63,7 +99,7 @@ export default function Experience() {
                 friction={0.7}
                 colliders={false}
                 onCollisionEnter={collisionEnter}
-                onCollisionExit={() => { console.log('exit') }}
+            // onCollisionExit={() => { console.log('exit') }}
             >
                 <mesh
                     castShadow
@@ -96,6 +132,25 @@ export default function Experience() {
                     <meshStandardMaterial color='red' />
                 </mesh>
             </RigidBody>
+
+            <RigidBody colliders={false} position={[0, 4, 0]}>
+                <primitive object={hamburger.scene} scale={0.25} />
+                <CylinderCollider args={[0.5, 1.25]} />
+            </RigidBody>
+
+            <RigidBody type="fixed">
+                <CuboidCollider args={[5, 2, 0.5]} position={[0, 1, 5.5]} />
+                <CuboidCollider args={[5, 2, 0.5]} position={[0, 1, - 5.5]} />
+                <CuboidCollider args={[0.5, 2, 5]} position={[5.5, 1, 0]} />
+                <CuboidCollider args={[0.5, 2, 5]} position={[- 5.5, 1, 0]} />
+            </RigidBody>
+
+            <InstancedRigidBodies instances={instances}>
+                <instancedMesh ref={cubes} args={[null, null, cubesCount]} castShadow>
+                    <boxGeometry />
+                    <meshStandardMaterial color='tomato' />
+                </instancedMesh>
+            </InstancedRigidBodies>
         </Physics>
     </>
 }
