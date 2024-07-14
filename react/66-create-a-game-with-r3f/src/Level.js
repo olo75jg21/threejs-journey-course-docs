@@ -1,7 +1,8 @@
-import React, { useRef, useState } from 'react'
+import React, { useRef, useState, useMemo } from 'react'
 import * as THREE from 'three'
-import { RigidBody } from '@react-three/rapier'
+import { CuboidCollider, RigidBody } from '@react-three/rapier'
 import { useFrame } from '@react-three/fiber'
+import { useGLTF } from '@react-three/drei'
 
 const boxGeometry = new THREE.BoxGeometry(1, 1, 1)
 
@@ -10,7 +11,7 @@ const floor2Material = new THREE.MeshStandardMaterial({ color: 'greenyellow' })
 const obstacleMaterial = new THREE.MeshStandardMaterial({ color: 'orangered' })
 const wallMaterial = new THREE.MeshStandardMaterial({ color: 'slategrey' })
 
-function BlockStart({ position = [0, 0, 0] }) {
+export function BlockStart({ position = [0, 0, 0] }) {
   return (
     <group position={position}>
       <mesh
@@ -24,7 +25,13 @@ function BlockStart({ position = [0, 0, 0] }) {
   )
 }
 
-function BlockEnd({ position = [0, 0, 0] }) {
+export function BlockEnd({ position = [0, 0, 0] }) {
+  const hamburger = useGLTF('./hamburger.glb');
+
+  hamburger.scene.children.forEach((mesh) => {
+    mesh.castShadow = true
+  })
+
   return (
     <group position={position}>
       <mesh
@@ -34,11 +41,15 @@ function BlockEnd({ position = [0, 0, 0] }) {
         scale={[4, 0.2, 4]}
         receiveShadow
       />
+
+      <RigidBody type='fixed' colliders='hull' position={[0, 0.25, 0]} restitution={0.2} friction={0}>
+        <primitive object={hamburger.scene} scale={0.2} />
+      </RigidBody>
     </group>
   )
 }
 
-function BlockSpinner({ position = [0, 0, 0] }) {
+export function BlockSpinner({ position = [0, 0, 0] }) {
   const [speed] = useState(() => (Math.random() + 0.2) * (Math.random() < 0.5 ? -1 : 1))
   const obstacle = useRef()
 
@@ -77,7 +88,7 @@ function BlockSpinner({ position = [0, 0, 0] }) {
   )
 }
 
-function BlockLimbo({ position = [0, 0, 0] }) {
+export function BlockLimbo({ position = [0, 0, 0] }) {
   const [timeOffset] = useState(() => Math.random() * Math.PI * 2)
   const obstacle = useRef()
 
@@ -115,7 +126,7 @@ function BlockLimbo({ position = [0, 0, 0] }) {
   )
 }
 
-function BlockAxe({ position = [0, 0, 0] }) {
+export function BlockAxe({ position = [0, 0, 0] }) {
   const [timeOffset] = useState(() => Math.random() * Math.PI * 2)
   const obstacle = useRef()
 
@@ -153,14 +164,63 @@ function BlockAxe({ position = [0, 0, 0] }) {
   )
 }
 
-const Level = () => {
+function Bounds({ length = 1 }) {
   return (
     <>
-      <BlockStart position={[0, 0, 16]} />
-      <BlockSpinner position={[0, 0, 12]} />
-      <BlockLimbo position={[0, 0, 8]} />
-      <BlockAxe position={[0, 0, 4]} />
-      <BlockEnd position={[0, 0, 0]} />
+      <RigidBody type='fixed' restitution={0.2} friction={0}>
+
+        <mesh
+          position={[2.15, 0.75, - (length * 2) + 2]}
+          geometry={boxGeometry}
+          material={wallMaterial}
+          scale={[0.3, 1.5, 4 * length]}
+          castShadow
+        />
+
+        <mesh
+          position={[-2.15, 0.75, - (length * 2) + 2]}
+          geometry={boxGeometry}
+          material={wallMaterial}
+          scale={[0.3, 1.5, 4 * length]}
+          receiveShadow
+        />
+
+        <mesh
+          position={[0, 0.75, - (length * 4) + 2]}
+          geometry={boxGeometry}
+          material={wallMaterial}
+          scale={[4, 1.5, 0.3]}
+          receiveShadow
+        />
+        <CuboidCollider
+          args={[2, 0.1, 2 * length]}
+          position={[0, -0.1, - (length * 2) + 2]}
+          restitution={0.2}
+          friction={1}
+        />
+      </RigidBody>
+    </>
+  )
+}
+
+const Level = ({ count = 5, types = [BlockSpinner, BlockAxe, BlockLimbo] }) => {
+  const blocks = useMemo(() => {
+    const blocks = []
+
+    for (let i = 0; i < count; i++) {
+      const type = types[Math.floor(Math.random() * types.length)]
+      blocks.push(type)
+    }
+
+    return blocks;
+  }, [count, types])
+
+  return (
+    <>
+      <BlockStart position={[0, 0, 0]} />
+      {blocks.map((Block, index) => <Block key={index} position={[0, 0, -(index + 1) * 4]} />)}
+      <BlockEnd position={[0, 0, - (count + 1) * 4]} />
+      <Bounds length={count + 2} />
     </>
   )
 }
