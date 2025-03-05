@@ -1,8 +1,9 @@
+import * as THREE from 'three'
 import { useState, useEffect, useRef } from 'react';
 import { useRapier, RigidBody } from '@react-three/rapier';
 import { useFrame } from '@react-three/fiber';
 import { useKeyboardControls } from '@react-three/drei';
-import * as THREE from 'three'
+import useGame from './stores/useGame';
 
 export default function Player() {
   const body = useRef()
@@ -11,6 +12,10 @@ export default function Player() {
 
   const [smoothedCameraPosition] = useState(() => new THREE.Vector3(10, 10, 10))
   const [smoothedTargetPosition] = useState(() => new THREE.Vector3())
+
+  const start = useGame((state) => state.start)
+  const end = useGame((state) => state.end)
+  const blocksCount = useGame((state) => state.blocksCount)
 
   const jump = () => {
     const origin = body.current.translation()
@@ -34,8 +39,13 @@ export default function Player() {
       }
     )
 
+    const unsubscribeAny = subscribeKeys(() => {
+      start()
+    })
+
     return (() => {
       unsubscribeKeys()
+      unsubscribeAny()
     })
 
   }, [])
@@ -88,6 +98,10 @@ export default function Player() {
 
     state.camera.position.copy(smoothedCameraPosition)
     state.camera.lookAt(smoothedTargetPosition)
+
+    if (bodyPosition.z < - (blocksCount * 4 + 2)) {
+      end()
+    }
   })
 
   return (
